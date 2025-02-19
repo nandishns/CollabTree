@@ -1,0 +1,23 @@
+# Frontend
+/frontend/node_modules
+/frontend/.env
+/frontend/.env.local
+/frontend/package-lock.json
+/frontend/.next
+/frontend/build
+/frontend/dist
+
+# Backend
+/collabtree-backend/.venv
+/collabtree-backend/venv
+/collabtree-backend/.env
+/collabtree-backend/__pycache__
+/collabtree-backend/**/__pycache__
+/collabtree-backend/*.pyc
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store

@@ -44,7 +44,7 @@ class TeamService {
     try {
       const { data } = await axios.post<GetTeamsResponse>(
         `${this.baseUrl}/my-teams`,
-        { user_id: userId.toString() }
+        { user_id: userId }
       );
       // Handle case where data or teams is undefined/null
       if (!data || !data.teams) {
@@ -146,6 +146,20 @@ class TeamService {
   public async joinTeam(joinData: JoinTeamRequest): Promise<void> {
     try {
       await axios.post(`${this.baseUrl}/join`, joinData);
+    } catch (error) {
+      throw this.normalizeError(error);
+    }
+  }
+
+  public async checkTeamExists(teamId: string | number): Promise<TeamExistsResponse> {
+    try {
+      const { data } = await axios.get<TeamExistsResponse>(
+        `${this.baseUrl}/exists/${teamId}`
+      );
+      if (!data.exists) {
+        throw new Error('Team not found');
+      }
+      return data;
     } catch (error) {
       throw this.normalizeError(error);
     }

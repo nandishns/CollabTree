@@ -14,7 +14,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/teams", tags=["teams"])
+router = APIRouter()
 
 @router.post("/create", response_model=TeamResponse)
 async def create_team(

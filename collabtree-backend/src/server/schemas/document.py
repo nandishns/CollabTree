@@ -1,10 +1,13 @@
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, HttpUrl, ConfigDict
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 
 class DocumentScrapeRequest(BaseModel):
-    url: HttpUrl
+    url: str
     team_id: int
+    user_id: int
+    document_name: str
+    max_pages: int = 50
 
 class DocumentSectionBase(BaseModel):
     title: str
@@ -20,8 +23,7 @@ class DocumentSectionResponse(DocumentSectionBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class DocumentBase(BaseModel):
     title: str
@@ -39,8 +41,7 @@ class DocumentResponse(DocumentBase):
     updated_at: datetime
     sections: List[DocumentSectionResponse] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class DocumentUpdateRequest(BaseModel):
     title: Optional[str] = None
@@ -48,8 +49,7 @@ class DocumentUpdateRequest(BaseModel):
 
 class DocumentScrapeResponse(BaseModel):
     message: str
-    document: DocumentResponse 
-
+    document: DocumentResponse
 
 class Section(BaseModel):
     title: str
@@ -68,3 +68,9 @@ class ScrapedPage(BaseModel):
     title: str
     url: str
     content: Content
+
+class StoreScrapedDataRequest(BaseModel):
+    team_id: int
+    user_id: int
+    document_name: str
+    scraped_data: Dict[str, Any]

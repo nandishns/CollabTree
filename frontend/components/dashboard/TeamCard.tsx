@@ -62,7 +62,7 @@ export default function TeamCard({ id, name, created_at, members, onInvite }: Te
               className="w-full sm:w-auto flex items-center justify-center gap-2 hover:bg-gray-100"
             >
               <UserPlus className="h-4 w-4" />
-              <span>Invite Members</span>
+              <span>Invite</span>
             </Button>
           </div>
 

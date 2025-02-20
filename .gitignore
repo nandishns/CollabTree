@@ -15,6 +15,9 @@
 /collabtree-backend/**/__pycache__
 /collabtree-backend/*.pyc
 
+/HocusPocusWebSocket-Service/node_modules
+/HocusPocusWebSocket-Service/db.sqlite
+
 # IDE/Editor files
 .vscode/
 .idea/

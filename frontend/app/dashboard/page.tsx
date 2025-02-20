@@ -101,7 +101,7 @@ export default function Dashboard() {
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-50">
         <header className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-[1400px] mx-auto px-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-4 gap-4">
               <div className="flex items-center">
                 <h1 className="text-xl sm:text-2xl font-bold text-blue-600 flex items-center">
@@ -139,48 +139,50 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-8">
-            <h2 className="text-xl font-semibold text-gray-900">Your Teams</h2>
-            <div className="relative flex-1 sm:flex-none sm:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search teams..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 w-full"
-              />
-            </div>
-          </div>
-
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-            </div>
-          ) : filteredTeams.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-              <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No teams yet</h3>
-              <p className="text-sm text-gray-500 mb-6">Get started by creating your first team</p>
-              <Button
-                onClick={() => setIsCreateTeamOpen(true)}
-                className="flex items-center mx-auto"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Your First Team
-              </Button>
-            </div>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {filteredTeams.map((team) => (
-                <TeamCard
-                  key={team.id}
-                  {...team}
-                  onInvite={() => handleInvite(team)}
+        <main className="py-6">
+          <div className="max-w-[1400px] mx-auto px-4">
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-8">
+              <h2 className="text-xl font-semibold text-gray-900">Your Teams</h2>
+              <div className="relative flex-1 sm:flex-none sm:w-64">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search teams..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 w-full"
                 />
-              ))}
+              </div>
             </div>
-          )}
+
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              </div>
+            ) : filteredTeams.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-gray-100">
+                <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No teams yet</h3>
+                <p className="text-sm text-gray-500 mb-6">Get started by creating your first team</p>
+                <Button
+                  onClick={() => setIsCreateTeamOpen(true)}
+                  className="flex items-center gap-2 mx-auto"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Your First Team
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {filteredTeams.map((team) => (
+                  <TeamCard
+                    key={team.id}
+                    {...team}
+                    onInvite={() => handleInvite(team)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </main>
 
         {/* Create Team Dialog */}

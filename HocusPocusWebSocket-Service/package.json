@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "@hocuspocus/extension-sqlite": "^2.15.2",
+    "@hocuspocus/server": "^2.15.2"
+  },
+  "scripts": {
+    "start": "node --loader ts-node/esm app.ts",
+    "dev": "node --loader ts-node/esm app.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  },
+  "type": "module"
+}

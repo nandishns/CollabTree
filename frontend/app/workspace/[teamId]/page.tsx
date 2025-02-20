@@ -1,148 +1,413 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/app/contexts/AuthContext"
 import { 
-  Globe, 
   FileText, 
-  ArrowRight, 
-  Link as LinkIcon,
-  BookOpen,
-  AlertCircle
+  Plus,
+  Globe,
+  Calendar,
+  ChevronRight,
+  Check,
+  Loader2,
+  RefreshCw,
+  ArrowLeft,
+  PenSquare,
+  Users,
+  ChevronLeft,
+  Mail,
+  Menu
 } from "lucide-react"
+import { formatDistanceToNow } from "date-fns"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
+import axios from "axios"
+import { Team } from "@/types/team"
+import { documentService } from "@/services/documentService"
+import { teamService } from "@/services/teamService"
+
+interface Document {
+  id: number
+  title: string
+  url: string
+  content: any
+  team_id: number
+  created_at: string
+  updated_at: string
+  sections: any[]
+}
+
+// Use the TeamExistsResponse type from teamService for the team state
+type TeamState = {
+  exists: boolean
+  team_id?: number
+  name?: string
+  created_at?: string
+  message?: string
+  members?: Array<{
+    id: number
+    email: string
+    joined_at: string
+  }>
+}
 
 export default function WorkspacePage() {
   const { teamId } = useParams()
   const router = useRouter()
   const { toast } = useToast()
   const { user } = useAuth()
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [team, setTeam] = useState<TeamState | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [documentUrl, setDocumentUrl] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
+  const [documentName, setDocumentName] = useState("")
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [processStage, setProcessStage] = useState<{
+    scraping: boolean
+    processing: boolean
+    completed: boolean
+  }>({
+    scraping: false,
+    processing: false,
+    completed: false
+  })
 
-  const handleImport = async () => {
-    if (!documentUrl.trim()) {
-      toast({
-        variant: "destructive",
-        description: "Please enter a valid documentation URL",
-      })
-      return
-    }
+  useEffect(() => {
+    fetchDocuments()
+    fetchTeam()
+  }, [teamId])
 
-    setIsLoading(true)
+  const fetchTeam = async () => {
+    if (!teamId) return
     try {
-      // Here you'll add the logic to send the URL to your backend for scraping
-      // For now, we'll just simulate a delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      toast({
-        description: "Documentation imported successfully!",
-      })
-      
-      // Navigate back to dashboard or documentation view
-      router.push("/dashboard")
+      const teamData = await teamService.checkTeamExists(teamId.toString())
+      if (teamData.exists) {
+        setTeam(teamData)
+      }
     } catch (error) {
       toast({
         variant: "destructive",
-        description: "Failed to import documentation. Please try again.",
+        description: "Failed to load team details.",
       })
+    }
+  }
+
+  const fetchDocuments = async () => {
+    if (!teamId) return
+
+    try {
+      const documents = await documentService.getTeamDocuments(teamId.toString())
+      setDocuments(documents)
+    } catch (error) {
+      console.error("Error fetching documents:", error)
+      toast({
+        variant: "destructive",
+        description: "Failed to load documents. Please try again.",
+      })
+      setDocuments([])
     } finally {
       setIsLoading(false)
     }
   }
 
+  const handleImport = async () => {
+    if (!documentUrl.trim() || !documentName.trim()) {
+      toast({
+        variant: "destructive",
+        description: "Please enter both URL and document name",
+      })
+      return
+    }
+
+    setIsProcessing(true)
+    setProcessStage({ scraping: true, processing: false, completed: false })
+
+    try {
+      // Simulate scraping delay
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      setProcessStage({ scraping: true, processing: true, completed: false })
+
+      const response = await documentService.scrapeDocument({
+        url: documentUrl,
+        team_id: parseInt(teamId as string),
+        user_id: parseInt(user?.id as string),
+        document_name: documentName
+      })
+
+      // Simulate processing delay
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      setProcessStage({ scraping: true, processing: true, completed: true })
+
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      router.push(`/edit/${documentName}/${user?.id}`)
+    } catch (error) {
+      console.error("Error importing document:", error)
+      toast({
+        variant: "destructive",
+        description: "Failed to import document. Please try again.",
+      })
+      setIsProcessing(false)
+      setProcessStage({ scraping: false, processing: false, completed: false })
+    }
+  }
+
+  const ProcessingStep = ({ done, processing, label }: { done: boolean; processing: boolean; label: string }) => (
+    <div className="flex items-center gap-3">
+      {done ? (
+        <div className="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center">
+          <Check className="h-4 w-4 text-green-600" />
+        </div>
+      ) : processing ? (
+        <div className="h-6 w-6 flex items-center justify-center">
+          <RefreshCw className="h-4 w-4 text-blue-600 animate-spin" />
+        </div>
+      ) : (
+        <div className="h-6 w-6 rounded-full border-2 border-gray-200" />
+      )}
+      <span className={`text-sm ${done ? 'text-green-600' : processing ? 'text-blue-600' : 'text-gray-500'}`}>
+        {label}
+      </span>
+    </div>
+  )
+
   return (
-    <div className="min-h-screen bg-gray-50 py-6 sm:py-12">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="p-6 sm:p-8">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="p-2.5 bg-blue-50 rounded-lg">
-                <BookOpen className="h-6 w-6 text-blue-600" />
-              </div>
+    <div className="min-h-screen bg-gray-50">
+      <nav className="sticky top-0 z-30 bg-white border-b border-gray-200">
+        <div className="max-w-[1400px] mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push("/dashboard")}
+                className="mr-4"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Back
+              </Button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Import Documentation
+                <h1 className="text-xl font-semibold text-gray-900">
+                  {team?.name || "Team Workspace"}
                 </h1>
-                <p className="text-sm text-gray-500 mt-1">
-                  Add documentation from external sources to your workspace
-                </p>
               </div>
             </div>
-            
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <label 
-                  htmlFor="doc-url" 
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Documentation URL
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Globe className="h-5 w-5 text-gray-400" />
+            <div className="flex items-center gap-4">
+              <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    <span className="hidden sm:inline">Team Members</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="w-[300px] sm:w-[400px]">
+                  <SheetHeader>
+                    <SheetTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5 text-blue-600" />
+                      Team Members
+                    </SheetTitle>
+                  </SheetHeader>
+                  <div className="mt-6 space-y-6">
+                    {team?.members?.map((member) => (
+                      <div
+                        key={member.id}
+                        className="flex items-start gap-3 pb-4 border-b border-gray-100 last:border-0"
+                      >
+                        <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-medium text-blue-600">
+                            {member.email.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {member.email}
+                          </p>
+                          {member.joined_at && (
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              Joined {formatDistanceToNow(new Date(member.joined_at))} ago
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <Input
-                    id="doc-url"
-                    type="url"
-                    placeholder="https://docs.example.com"
-                    value={documentUrl}
-                    onChange={(e) => setDocumentUrl(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <p className="text-sm text-gray-500">
-                  Enter the URL of the documentation you want to import
-                </p>
-              </div>
-
-              <div className="bg-amber-50 rounded-lg p-4 flex gap-3">
-                <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <h3 className="text-sm font-medium text-amber-800">
-                    Before you import
-                  </h3>
-                  <ul className="text-sm text-amber-700 space-y-1 list-disc list-inside">
-                    <li>Make sure you have permission to use the documentation</li>
-                    <li>The content should be publicly accessible</li>
-                    <li>Currently supports HTML and Markdown formats</li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3 pt-6">
-                <Button
-                  onClick={handleImport}
-                  disabled={isLoading || !documentUrl.trim()}
-                  className="flex-1 sm:flex-none sm:min-w-[200px] flex items-center justify-center gap-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
-                      <span>Importing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="h-4 w-4" />
-                      <span>Import Documentation</span>
-                    </>
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => router.push("/dashboard")}
-                  className="flex-1 sm:flex-none"
-                >
-                  Cancel
-                </Button>
-              </div>
+                </SheetContent>
+              </Sheet>
+              <Button onClick={() => setIsCreateOpen(true)} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Add Document</span>
+              </Button>
             </div>
           </div>
         </div>
-      </div>
+      </nav>
+
+      <main className="py-6">
+        <div className="max-w-[1400px] mx-auto px-4">
+          <div className="flex flex-col gap-6">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              </div>
+            ) : documents.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-gray-100">
+                <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No documents yet</h3>
+                <p className="text-sm text-gray-500 mb-6">Get started by adding your first document</p>
+                <Button
+                  onClick={() => setIsCreateOpen(true)}
+                  className="flex items-center gap-2 mx-auto"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Your First Document
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {documents.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-lg font-semibold text-gray-900 truncate mb-1">
+                          {doc.title}
+                        </h3>
+                        <p className="text-sm text-gray-500 truncate">
+                          {doc.url}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center text-xs text-gray-500 mb-4">
+                      <Calendar className="h-4 w-4 mr-1" />
+                      <span>Updated {formatDistanceToNow(new Date(doc.updated_at))} ago</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="w-full flex items-center justify-center gap-2"
+                      onClick={() => router.push(`/edit/${doc.id}-${doc.title.replace(/[^a-zA-Z0-9]/g, '')}/${user?.id || ''}`)}
+                    >
+                      <PenSquare className="h-4 w-4" />
+                      Open Editor
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5 text-blue-600" />
+              Import Document
+            </DialogTitle>
+          </DialogHeader>
+
+          {isProcessing ? (
+            <div className="py-6 space-y-6">
+              <div className="space-y-4">
+                <ProcessingStep 
+                  done={processStage.scraping && processStage.processing} 
+                  processing={processStage.scraping && !processStage.processing}
+                  label="Scraping data..." 
+                />
+                <ProcessingStep 
+                  done={processStage.completed} 
+                  processing={processStage.processing && !processStage.completed}
+                  label="Processing content..." 
+                />
+              </div>
+
+              {processStage.completed && (
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setIsCreateOpen(false)
+                      setIsProcessing(false)
+                      setProcessStage({ scraping: false, processing: false, completed: false })
+                      setDocumentUrl("")
+                      setDocumentName("")
+                    }}
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Go Back
+                  </Button>
+                  <Button 
+                    className="flex-1"
+                    onClick={() => router.push(`/edit/${teamId}`)}
+                  >
+                    <PenSquare className="h-4 w-4 mr-2" />
+                    Open Editor
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="py-4">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="doc-name" className="text-sm font-medium text-gray-700">
+                    Document Name
+                  </label>
+                  <Input
+                    id="doc-name"
+                    placeholder="Enter document name"
+                    value={documentName}
+                    onChange={(e) => setDocumentName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="doc-url" className="text-sm font-medium text-gray-700">
+                    Documentation URL
+                  </label>
+                  <div className="relative">
+                    <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="doc-url"
+                      type="url"
+                      placeholder="https://docs.example.com"
+                      value={documentUrl}
+                      onChange={(e) => setDocumentUrl(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+                <Button
+                  className="w-full mt-2"
+                  onClick={handleImport}
+                  disabled={!documentUrl.trim() || !documentName.trim()}
+                >
+                  Import Document
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 

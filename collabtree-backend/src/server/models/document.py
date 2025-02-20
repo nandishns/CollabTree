@@ -8,6 +8,8 @@ class Document(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    document_name = Column(String, nullable=False)
     title = Column(String, nullable=False)
     url = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -21,6 +23,7 @@ class Document(Base):
     
     # Relationships
     team = relationship("Team", backref="documents")
+    user = relationship("User", backref="documents")
     sections = relationship("DocumentSection", back_populates="document", cascade="all, delete-orphan")
 
 class DocumentSection(Base):

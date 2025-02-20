@@ -29,7 +29,7 @@ export default function CollaborativeEditor() {
 
     const newProvider = new HocuspocusProvider({
       url: process.env.NEXT_PUBLIC_HOCUSPOCUS_URL || '',
-      name: `${params.pageName}-${params.uuid}`,
+      name: `${params.pageName}`,
       token: user.accessToken || '',
     })
 

@@ -1,56 +1,137 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import { useAuth } from '../contexts/AuthContext'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-
+import TeamCard from "@/components/dashboard/TeamCard"
+import InviteTeamDialog from "@/components/dashboard/InviteTeamDialog"
+import { useToast } from "@/hooks/use-toast"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Team } from "@/types/team"
+import { teamService } from "@/services/teamService"
+import { 
+  Users,
+  Plus,
+  LogOut,
+  Search,
+  Loader2,
+  UserCircle2
+} from "lucide-react"
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("queue")
   const { setTheme, theme } = useTheme()
   const { user, logout } = useAuth()
   const router = useRouter()
+  const { toast } = useToast()
+  const [teams, setTeams] = useState<Team[]>([])
+  const [isCreateTeamOpen, setIsCreateTeamOpen] = useState(false)
+  const [isInviteOpen, setIsInviteOpen] = useState(false)
+  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
+  const [newTeamName, setNewTeamName] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
 
-  const createNewDocument = () => {
-    const documentName = prompt('Enter document name:')
-    if (documentName) {
-      const safeName = encodeURIComponent(documentName.trim())
-      router.push(`/edit/${safeName}/${user?.id}`)
+  useEffect(() => {
+    fetchTeams()
+  }, [user])
+
+  const fetchTeams = async () => {
+    if (!user) return
+    
+    try {
+      const teams = await teamService.getTeams(user.id)
+      setTeams(teams)
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        description: error instanceof Error ? error.message : "Failed to load teams. Please try again.",
+      })
+    } finally {
+      setIsLoading(false)
     }
   }
 
+  const handleCreateTeam = async () => {
+    if (!newTeamName.trim() || !user) return
+
+    try {
+      await teamService.createTeam({
+        name: newTeamName,
+        created_by: user.id.toString()
+      })
+
+      toast({
+        description: "Team created successfully!",
+      })
+      
+      setNewTeamName('')
+      setIsCreateTeamOpen(false)
+      fetchTeams()
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        description: error instanceof Error ? error.message : "Failed to create team. Please try again.",
+      })
+    }
+  }
+
+  const handleInvite = (team: Team) => {
+    setSelectedTeam(team)
+    setIsInviteOpen(true)
+  }
+
+  const filteredTeams = teams.filter(team => 
+    team.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-100">
-        <header className="bg-white shadow">
-          <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-              <div className="flex items-center w-full sm:w-auto justify-center sm:justify-start">
-                <h1 className="ml-4 text-xl sm:text-2xl font-bold text-gray-900 truncate">
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white shadow-sm border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-4 gap-4">
+              <div className="flex items-center">
+                <h1 className="text-xl sm:text-2xl font-bold text-blue-600 flex items-center">
+                  <Users className="h-6 w-6 sm:h-8 sm:w-8 mr-2" />
                   CollabTree
                 </h1>
               </div>
-              <div className="flex items-center space-x-4 w-full sm:w-auto justify-center sm:justify-end">
-                <span className="text-gray-700 text-sm sm:text-base">Welcome, {user?.email}</span>
-
-                <Button size="sm" onClick={logout}>Logout</Button>
-                <div className="flex items-center gap-2">
-                  
-                  <Button
-                    variant="ghost" 
-                    size="icon"
-                    asChild
+              
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="flex items-center space-x-2 px-3 py-1.5 bg-gray-100 rounded-full">
+                  <UserCircle2 className="h-5 w-5 text-gray-600 flex-shrink-0" />
+                  <span className="text-sm text-gray-600 truncate">{user?.email}</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsCreateTeamOpen(true)}
+                    className="flex items-center justify-center flex-1 sm:flex-none"
                   >
-                    <a href="https://github.com/nandishns/" target="_blank" rel="noopener noreferrer">
-                      <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
-                      </svg>
-                      <span className="sr-only">GitHub repository</span>
-                    </a>
+                    <Plus className="h-4 w-4 mr-1" />
+                    New Team
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={logout}
+                    className="text-gray-600 hover:text-gray-900"
+                  >
+                    <LogOut className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -58,16 +139,90 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl text-black">Your Documents</h1>
-            <Button onClick={createNewDocument}>
-              Create New Document
-            </Button>
+        <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-8">
+            <h2 className="text-xl font-semibold text-gray-900">Your Teams</h2>
+            <div className="relative flex-1 sm:flex-none sm:w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search teams..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 w-full"
+              />
+            </div>
           </div>
-          
-          {/* Add your documents list here */}
+
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+          ) : filteredTeams.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+              <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No teams yet</h3>
+              <p className="text-sm text-gray-500 mb-6">Get started by creating your first team</p>
+              <Button
+                onClick={() => setIsCreateTeamOpen(true)}
+                className="flex items-center mx-auto"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Your First Team
+              </Button>
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {filteredTeams.map((team) => (
+                <TeamCard
+                  key={team.id}
+                  {...team}
+                  onInvite={() => handleInvite(team)}
+                />
+              ))}
+            </div>
+          )}
         </main>
+
+        {/* Create Team Dialog */}
+        <Dialog open={isCreateTeamOpen} onOpenChange={setIsCreateTeamOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <Users className="h-5 w-5 mr-2 text-blue-600" />
+                Create New Team
+              </DialogTitle>
+              <DialogDescription>
+                Add a name for your new team to get started.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="team-name">Team name</Label>
+                <Input
+                  id="team-name"
+                  placeholder="Enter team name"
+                  value={newTeamName}
+                  onChange={(e) => setNewTeamName(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={handleCreateTeam} disabled={!newTeamName.trim()}>
+                Create Team
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Invite Dialog */}
+        {selectedTeam && (
+          <InviteTeamDialog
+            isOpen={isInviteOpen}
+            setIsOpen={setIsInviteOpen}
+            teamId={selectedTeam.id.toString()}
+            teamName={selectedTeam.name}
+          />
+        )}
       </div>
     </ProtectedRoute>
   )

@@ -49,28 +49,6 @@ const TestCredentialsContent = () => {
             </div>
           </div>
         </div>
-
-        <div className="space-y-3">
-            <h3 className="font-medium text-lg">Admin Account</h3>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Staff ID:</Label>
-              <code className="relative rounded bg-muted px-3 py-1 font-mono text-sm">67890</code>
-            </div>
-            <div className="flex items-center justify-between">
-              <Label>Password:</Label>
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="font-mono text-sm"
-                onClick={() => copyToClipboard("admin@pes", "Admin password")}
-              >
-                <span className="mr-2">••••••••</span>
-                <Copy className="h-3 w-3" />
-              </Button>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   )

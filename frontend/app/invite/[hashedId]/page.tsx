@@ -27,18 +27,20 @@ export default function InvitePage() {
     try {
       setIsLoading(true)
       setError("")
-
-      const result = await teamService.validateInvite(hashedId as string, user.email)
-
+      console.log(hashedId, user.email)
+      const result = await teamService.validateInvite(hashedId.toString(), user.email)
+      console.log("result", result)
       if (!result.isValid) {
+        console.log(result.error)
         setError(result.error || "Invalid invite link")
         return
       }
 
       setTeamName(result.teamName || "")
       setTeamId(result.teamId)
-
+ 
     } catch (error) {
+      console.log(error)
       setError("Failed to validate invite")
       toast({
         variant: "destructive",

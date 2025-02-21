@@ -84,7 +84,11 @@ class TeamService {
    * @returns The generated invite link
    */
   public generateInviteLink(teamId: string, email: string): string {
-    const hash = btoa(`${email}:${teamId}`);
+    // Use URL-safe base64 encoding by replacing potentially problematic characters
+    const hash = btoa(`${email}:${teamId}`)
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
     return `${window.location.origin}/invite/${hash}`;
   }
 
@@ -101,11 +105,28 @@ class TeamService {
     error?: string;
   }> {
     try {
-      // Decode the hashed ID
-      const decoded = atob(hashedId);
+      console.log("Attempting to validate invite with hashedId:", hashedId);
+      let decoded;
+      try {
+        // Add padding to make the length a multiple of 4
+        let base64 = hashedId.replace(/-/g, '+').replace(/_/g, '/');
+        while (base64.length % 4) {
+          base64 += '=';
+        }
+        
+        decoded = atob(base64);
+        console.log("Successfully decoded:", decoded);
+      } catch (decodeError) {
+        console.error("Failed to decode hashedId:", decodeError);
+        return {
+          isValid: false,
+          error: "Invalid invite link format"
+        };
+      }
       const [email, teamId] = decoded.split(":");
-      console.log(email, teamId)
-
+      console.log("email", email)
+      console.log("teamId", teamId)
+      console.log("userEmail", userEmail)
       // Validate if the invite is for the logged-in user
       if (email !== userEmail) {
         return {
@@ -133,6 +154,7 @@ class TeamService {
       };
 
     } catch (error) {
+      console.log("error", error)
       return {
         isValid: false,
         error: "Invalid or expired invite link"

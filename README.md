@@ -61,26 +61,26 @@ CollabTree is a full-stack application that allows teams to create, edit, and ma
 
 ### Installation & Setup
 1. **Clone the Repository**
-   ```bash
+```bash
 git clone https://github.com/nandishns/CollabTree
 cd collabtree
 ```
 2. **Install Backend Dependencies**
-   ```bash
+```bash
 cd collabtree-backend
 pip install -r requirements.txt
 # or if you use Poetry
 poetry install
 ```
 3. **Install Frontend Dependencies**
-   ```bash
+```bash
 cd ../frontend
 npm install
 # or
 yarn
 ```
 4. **Install WebSocket Service Dependencies**
-   ```bash
+```bash
 cd ../HocusPocusWebSocket-Service
 npm install
 # or yarn
@@ -92,19 +92,19 @@ Make sure to configure your environment variables (for JWT secrets, DB connectio
 
 **Option A: Manual (Local) Run**
 1. **Run the Backend (FastAPI)**
-   ```bash
+```bash
 cd collabtree-backend
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
    - Your backend API will be available at http://localhost:8000.
 2. **Run the WebSocket Service**
-   ```bash
+```bash
 cd HocusPocusWebSocket-Service
 npm run start
 ```
    - Typically runs on ws://0.0.0.0:80 or whichever port you configured.
 3. **Run the Frontend (Next.js)**
-   ```bash
+```bash
 cd frontend
 npm run dev
 ```
@@ -112,7 +112,7 @@ npm run dev
 
 **Option B: Docker / Docker-Compose**
 - If you have a docker-compose.yml file set up, simply run:
-   ```bash
+```bash
 docker-compose up --build
 ```
    - Confirm all containers (backend, frontend, websocket, DB, etc.) are running properly.

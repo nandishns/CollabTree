@@ -104,6 +104,7 @@ class TeamService {
       // Decode the hashed ID
       const decoded = atob(hashedId);
       const [email, teamId] = decoded.split(":");
+      console.log(email, teamId)
 
       // Validate if the invite is for the logged-in user
       if (email !== userEmail) {

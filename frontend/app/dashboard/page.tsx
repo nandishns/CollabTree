@@ -29,6 +29,7 @@ import {
   Loader2,
   UserCircle2
 } from "lucide-react"
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query"
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("queue")
@@ -36,56 +37,49 @@ export default function Dashboard() {
   const { user, logout } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
-  const [teams, setTeams] = useState<Team[]>([])
   const [isCreateTeamOpen, setIsCreateTeamOpen] = useState(false)
   const [isInviteOpen, setIsInviteOpen] = useState(false)
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
   const [newTeamName, setNewTeamName] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    fetchTeams()
-  }, [user])
+  // Use React Query for teams data
+  const { data: teams = [], isLoading } = useQuery({
+    queryKey: ['teams', user?.id],
+    queryFn: () => teamService.getTeams(user?.id || ''),
+    enabled: !!user?.id,
+    staleTime: 1000 * 60 * 5, 
+    gcTime: 1000 * 60 * 30, 
+  })
 
-  const fetchTeams = async () => {
-    if (!user) return
-    
-    try {
-      const teams = await teamService.getTeams(user.id)
-      setTeams(teams)
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        description: error instanceof Error ? error.message : "Failed to load teams. Please try again.",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleCreateTeam = async () => {
-    if (!newTeamName.trim() || !user) return
-
-    try {
-      await teamService.createTeam({
-        name: newTeamName,
-        created_by: user.id.toString()
-      })
-
+  // Use mutation for creating teams
+  const createTeamMutation = useMutation({
+    mutationFn: (name: string) => 
+      teamService.createTeam({
+        name,
+        created_by: user?.id?.toString() || ''
+      }),
+    onSuccess: () => {
       toast({
         description: "Team created successfully!",
       })
-      
       setNewTeamName('')
       setIsCreateTeamOpen(false)
-      fetchTeams()
-    } catch (error) {
+      // Invalidate and refetch teams query
+      queryClient.invalidateQueries({ queryKey: ['teams'] })
+    },
+    onError: (error) => {
       toast({
         variant: "destructive",
         description: error instanceof Error ? error.message : "Failed to create team. Please try again.",
       })
     }
+  })
+
+  const handleCreateTeam = async () => {
+    if (!newTeamName.trim() || !user) return
+    createTeamMutation.mutate(newTeamName)
   }
 
   const handleInvite = (team: Team) => {
@@ -209,8 +203,18 @@ export default function Dashboard() {
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleCreateTeam} disabled={!newTeamName.trim()}>
-                Create Team
+              <Button 
+                onClick={handleCreateTeam} 
+                disabled={!newTeamName.trim() || createTeamMutation.isPending}
+              >
+                {createTeamMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Team'
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

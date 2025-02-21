@@ -1,13 +1,18 @@
 import axios from 'axios';
 
-interface Section {
+interface ApiSection {
   title: string;
+  level: number;
   content: string;
-  order: number;
-  parent_section_id: number | null;
-  id: number;
-  created_at: string;
-  updated_at: string;
+  subsections: ApiSection[];
+}
+
+interface DocumentPage {
+  title: string;
+  url: string;
+  content: {
+    sections: ApiSection[];
+  };
 }
 
 interface DocumentResponse {
@@ -16,12 +21,13 @@ interface DocumentResponse {
   data: {
     title: string;
     url: string;
-    content: any;
+    content: {
+      pages: DocumentPage[];
+    };
     id: number;
     team_id: number;
     created_at: string;
     updated_at: string;
-    sections: Section[];
   };
   metadata: {
     document_id: number;
@@ -44,12 +50,10 @@ export const documentService = {
     }
   },
 
-  async updateDocument(documentId: string, data: { title: string; content: any }) {
+  async updateDocument(documentId: string, data: { title: string; content: { pages: DocumentPage[] } }) {
     try {
       const response = await axios.put(`${API_BASE_URL}/documents/${documentId}`, data);
-      console.log(response.data);
       return response.data;
-   
     } catch (error) {
       throw new Error('Failed to update document');
     }

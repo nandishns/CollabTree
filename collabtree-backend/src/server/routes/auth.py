@@ -6,9 +6,13 @@ from src.server.database.config import get_db
 from src.server.schemas.user import UserCreate, UserResponse, Token, UserLogin
 from src.server.services.user_service import UserService
 from src.server.services.auth_service import AuthService, ACCESS_TOKEN_EXPIRE_MINUTES
+from fastapi.middleware.cors import CORSMiddleware
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+
+# Update CORS middleware configuration to allow all origins
+origins = ["*"]  # This will allow all origins to access your API
 
 @router.post("/signup", response_model=UserResponse)
 async def signup(user: UserCreate, db: Session = Depends(get_db)):
@@ -26,9 +30,9 @@ async def signup(user: UserCreate, db: Session = Depends(get_db)):
         "access_token": access_token
     }
 
-@router.post("/login", response_model=Token)
-async def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
-    user = UserService.authenticate_user(db, user_credentials.email, user_credentials.password)
+@router.post("/login", response_model=UserResponse)
+async def login(user_data: UserLogin, db: Session = Depends(get_db)):
+    user = UserService.authenticate_user(db, user_data.email, user_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

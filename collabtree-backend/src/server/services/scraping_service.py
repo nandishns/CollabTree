@@ -91,7 +91,6 @@ class ScrapingService:
             response.raise_for_status()
             
             raw_html = response.text
-            logger.info(f"Raw HTML: {raw_html}")
             soup = BeautifulSoup(raw_html, 'html.parser')
             
             title = ScrapingService.extract_title(soup, url)

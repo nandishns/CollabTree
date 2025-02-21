@@ -61,10 +61,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
-        email,
-        password,
-      })
+      const requestBody = {
+        email: email.toLowerCase(),
+        password: password
+      }
+
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, requestBody)
+      
       const { access_token, ...userData } = response.data
       const user: User = {
         id: userData.id,
@@ -77,8 +80,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('user', JSON.stringify(user))
       router.replace('/dashboard')
     } catch (error) {
-      console.error('Login failed:', error)
-      throw new Error('Invalid credentials')
+      if (axios.isAxiosError(error)) {
+        if (error.response?.data?.detail && Array.isArray(error.response.data.detail)) {
+          const validationErrors = error.response.data.detail
+            .map((err: any) => err.msg)
+            .join(', ');
+          throw new Error(validationErrors);
+        }
+        
+        const serverMessage = error.response?.data?.message || error.response?.data?.detail
+        if (serverMessage) {
+          throw new Error(serverMessage)
+        }
+      }
+      throw new Error('Login failed. Please check your credentials and try again.')
     }
   }
 

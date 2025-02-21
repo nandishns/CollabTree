@@ -13,7 +13,6 @@ from src.server.services.scraping_service import ScrapingService
 from src.server.schemas.base import APIResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
-from fastapi.encoders import jsonable_encoder
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -24,14 +23,12 @@ async def scrape_site_endpoint(
     db: Session = Depends(get_db)
 ):
     """
-    Scrapes the site starting from `start_url` and returns up to `max_pages` pages of content.
+    Scrapes the site and stores all content in a single document.
     """
     logger.debug(f"Received scrape request: {request.dict()}")
     try:
-        max_pages = 50
-        results = ScrapingService.scrape_site(request.url,max_pages)
+        results = ScrapingService.scrape_site(request.url, request.max_pages)
         
-        # Format the first page result for storage
         if not results or len(results) == 0:
             return APIResponse(
                 success=False,
@@ -42,15 +39,19 @@ async def scrape_site_endpoint(
                 }
             )
 
-        first_page = results[0]  # Take the first page
+        # Format all pages into a single document
         formatted_data = {
             "url": str(request.url),
-            "title": first_page.get("title", "Untitled Document"),
-            "content": first_page.get("content", {}),
+            "title": request.document_name,
+            "content": {
+                "pages": results,
+                "total_pages": len(results),
+                "base_url": str(request.url)
+            },
             "raw_html": ""  # Optional, can be empty
         }
         
-        # save results to db
+        # Store everything in a single document
         document = DocumentService.store_scraped_data(
             db=db,
             team_id=request.team_id,
@@ -64,7 +65,7 @@ async def scrape_site_endpoint(
 
         return APIResponse(
             success=True,
-            message="Site scraped and document stored successfully",
+            message=f"Successfully scraped {len(results)} pages and stored as a single document",
             data=document_response,
             metadata={
                 "team_id": request.team_id,

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -40,6 +40,7 @@ import axios from "axios"
 import { Team } from "@/types/team"
 import { documentService } from "@/services/documentService"
 import { teamService } from "@/services/teamService"
+import { useQuery, useQueryClient, useMutation, UseQueryResult } from "@tanstack/react-query"
 
 interface Document {
   id: number
@@ -71,9 +72,6 @@ export default function WorkspacePage() {
   const router = useRouter()
   const { toast } = useToast()
   const { user } = useAuth()
-  const [documents, setDocuments] = useState<Document[]>([])
-  const [team, setTeam] = useState<TeamState | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [documentUrl, setDocumentUrl] = useState("")
   const [documentName, setDocumentName] = useState("")
@@ -88,59 +86,34 @@ export default function WorkspacePage() {
     processing: false,
     completed: false
   })
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    fetchDocuments()
-    fetchTeam()
-  }, [teamId])
+  // Use React Query for team data
+  const { data: team } = useQuery<TeamState, Error>({
+    queryKey: ['team', teamId],
+    queryFn: () => teamService.checkTeamExists(teamId?.toString() || ''),
+    enabled: !!teamId,
+    gcTime: 1000 * 60 * 30, // Keep unused data in cache for 30 minutes
+    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
+  })
 
-  const fetchTeam = async () => {
-    if (!teamId) return
-    try {
-      const teamData = await teamService.checkTeamExists(teamId.toString())
-      if (teamData.exists) {
-        setTeam(teamData)
-      }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        description: "Failed to load team details.",
-      })
-    }
-  }
+  // Use React Query for documents data
+  const { data: documents = [], isLoading }: UseQueryResult<Document[], Error> = useQuery({
+    queryKey: ['documents', teamId],
+    queryFn: () => documentService.getTeamDocuments(teamId?.toString() || ''),
+    enabled: !!teamId,
+    gcTime: 1000 * 60 * 15, // Keep unused data in cache for 15 minutes
+    staleTime: 1000 * 60 * 2, // Consider data fresh for 2 minutes
+  })
 
-  const fetchDocuments = async () => {
-    if (!teamId) return
-
-    try {
-      const documents = await documentService.getTeamDocuments(teamId.toString())
-      setDocuments(documents)
-    } catch (error) {
-      console.error("Error fetching documents:", error)
-      toast({
-        variant: "destructive",
-        description: "Failed to load documents. Please try again.",
-      })
-      setDocuments([])
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleImport = async () => {
-    if (!documentUrl.trim() || !documentName.trim()) {
-      toast({
-        variant: "destructive",
-        description: "Please enter both URL and document name",
-      })
-      return
-    }
-
-    setIsProcessing(true)
-    setProcessStage({ scraping: true, processing: false, completed: false })
-
-    try {
-      // Simulate scraping delay
+  // Use mutation for document import
+  const importDocumentMutation = useMutation<
+    { docID: number; docName: string },
+    Error,
+    { docID: number; docName: string }
+  >({
+    mutationFn: async (docData) => {
+      setProcessStage({ scraping: true, processing: false, completed: false })
       await new Promise(resolve => setTimeout(resolve, 2000))
       setProcessStage({ scraping: true, processing: true, completed: false })
 
@@ -151,22 +124,40 @@ export default function WorkspacePage() {
         document_name: documentName
       })
 
-      // Simulate processing delay
       await new Promise(resolve => setTimeout(resolve, 1500))
       setProcessStage({ scraping: true, processing: true, completed: true })
-
       await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      router.push(`/edit/${documentName}/${user?.id}`)
-    } catch (error) {
-      console.error("Error importing document:", error)
+
+      return docData
+    },
+    onSuccess: (data) => {
+      router.push(`/edit/${data.docID}-${data.docName.replace(/[^a-zA-Z0-9]/g, '')}/${user?.id || ''}`)
+      // Invalidate documents query to refetch
+      queryClient.invalidateQueries({ queryKey: ['documents', teamId] })
+    },
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         description: "Failed to import document. Please try again.",
       })
-      setIsProcessing(false)
       setProcessStage({ scraping: false, processing: false, completed: false })
+    },
+    onSettled: () => {
+      setIsProcessing(false)
     }
+  })
+
+  const handleImport = async (docID: number, docName: string) => {
+    if (!documentUrl.trim() || !documentName.trim()) {
+      toast({
+        variant: "destructive",
+        description: "Please enter both URL and document name",
+      })
+      return
+    }
+
+    setIsProcessing(true)
+    importDocumentMutation.mutate({ docID, docName })
   }
 
   const ProcessingStep = ({ done, processing, label }: { done: boolean; processing: boolean; label: string }) => (
@@ -281,7 +272,7 @@ export default function WorkspacePage() {
               </div>
             ) : (
               <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {documents.map((doc) => (
+                {documents.map((doc: Document) => (
                   <div
                     key={doc.id}
                     className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow"
@@ -398,7 +389,7 @@ export default function WorkspacePage() {
                 </div>
                 <Button
                   className="w-full mt-2"
-                  onClick={handleImport}
+                  onClick={() => handleImport(documents[0].id, documents[0].title)}
                   disabled={!documentUrl.trim() || !documentName.trim()}
                 >
                   Import Document

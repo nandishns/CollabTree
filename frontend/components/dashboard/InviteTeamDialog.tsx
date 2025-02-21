@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { teamService } from "@/services/teamService"
+import { Loader2 } from "lucide-react"
+import { useMutation } from "@tanstack/react-query"
 
 interface InviteTeamDialogProps {
   isOpen: boolean
@@ -24,14 +26,30 @@ export default function InviteTeamDialog({ isOpen, setIsOpen, teamId, teamName }
   const [email, setEmail] = useState('')
   const { toast } = useToast()
 
+  const inviteMutation = useMutation({
+    mutationFn: async () => {
+      const link = teamService.generateInviteLink(teamId, email)
+      await navigator.clipboard.writeText(link)
+      return link
+    },
+    onSuccess: () => {
+      toast({
+        description: "Invite link copied to clipboard!",
+      })
+      setEmail('')
+      setIsOpen(false)
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        description: "Failed to generate invite link. Please try again.",
+      })
+    }
+  })
+
   const handleCopyLink = () => {
-    const link = teamService.generateInviteLink(teamId, email)
-    navigator.clipboard.writeText(link)
-    toast({
-      description: "Invite link copied to clipboard!",
-    })
-    setEmail('')
-    setIsOpen(false)
+    if (!email.trim()) return
+    inviteMutation.mutate()
   }
 
   return (
@@ -58,9 +76,16 @@ export default function InviteTeamDialog({ isOpen, setIsOpen, teamId, teamName }
         <DialogFooter>
           <Button
             onClick={handleCopyLink}
-            disabled={!email}
+            disabled={!email.trim() || inviteMutation.isPending}
           >
-            Generate & Copy Invite Link
+            {inviteMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              'Generate & Copy Invite Link'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

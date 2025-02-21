@@ -41,7 +41,7 @@ const TestCredentialsContent = () => {
                 variant="outline" 
                 size="sm"
                 className="font-mono text-sm"
-                onClick={() => copyToClipboard("pes@pes.com", "User password")}
+                onClick={() => copyToClipboard("password123", "User password")}
               >
                 <span className="mr-2">••••••••</span>
                 <Copy className="h-3 w-3" />
@@ -64,9 +64,40 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validate email and password
+    if (!email.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter your email address",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!password.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter your password",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email.trim())) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsLoading(true)
     try {
-          await login(email, password)
+      await login(email.trim(), password.trim())
       toast({
         title: "Login Successful",
         description: "Welcome back!",
@@ -74,7 +105,7 @@ export default function LoginPage() {
     } catch (error) {
       toast({
         title: "Login Failed",
-        description: "Invalid credentials. Please try again.",
+        description: error instanceof Error ? error.message : "Invalid credentials. Please try again.",
         variant: "destructive",
       })
     } finally {

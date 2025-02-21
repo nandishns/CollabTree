@@ -14,11 +14,15 @@ import Link from 'next/link'
 export default function RegisterPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
   const { register } = useAuth()
   const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isLoading) return
+    
+    setIsLoading(true)
     try {
       await register(email, password)
       toast({
@@ -31,6 +35,8 @@ export default function RegisterPage() {
         description: "Please check your information and try again.",
         variant: "destructive",
       })
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -66,7 +72,13 @@ export default function RegisterPage() {
           </div>
         </CardContent>
         <CardFooter className="flex flex-col">
-          <Button className="w-full bg-black text-white hover:bg-gray-800" onClick={handleSubmit}>Register</Button>
+          <Button 
+            className="w-full bg-black text-white hover:bg-gray-800" 
+            onClick={handleSubmit}
+            disabled={isLoading}
+          >
+            {isLoading ? "Registering..." : "Register"}
+          </Button>
           <p className="mt-2 text-sm text-center text-gray-600">
             Already have an account?{" "}
             <Link href="/login" className="text-blue-600 hover:underline">

@@ -9,10 +9,7 @@ from src.server.services.auth_service import AuthService, ACCESS_TOKEN_EXPIRE_MI
 from fastapi.middleware.cors import CORSMiddleware
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
-
-# Update CORS middleware configuration to allow all origins
-origins = ["*"]  # This will allow all origins to access your API
+ 
 
 @router.post("/signup", response_model=UserResponse)
 async def signup(user: UserCreate, db: Session = Depends(get_db)):

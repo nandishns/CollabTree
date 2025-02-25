@@ -182,6 +182,31 @@ export default function CollaborativeEditor() {
             name: user?.email?.split('@')[0] || 'Anonymous',
             color: `#${Math.floor(Math.random()*16777215).toString(16)}`,
           },
+          render: (user) => {
+            const cursorEl = document.createElement('span');
+    cursorEl.style.position = 'absolute';
+    cursorEl.style.height = '1em'; // height of one text line
+    cursorEl.style.borderLeft = `2px solid ${user.color}`;
+    cursorEl.style.marginLeft = '2px';
+    cursorEl.style.display = 'inline-block';
+    
+
+    const label = document.createElement('div');
+    label.textContent = user.name;
+    label.style.position = 'absolute';
+    label.style.top = '-1.2em';
+    label.style.left = '0';
+    label.style.backgroundColor = user.color;
+    label.style.color = '#fff';
+    label.style.padding = '2px 4px';
+    label.style.fontSize = '10px';
+    label.style.borderRadius = '4px';
+    label.style.whiteSpace = 'nowrap';
+    
+ 
+    cursorEl.appendChild(label);
+            return cursorEl;
+          },
         }),
       ] : []),
     ],
